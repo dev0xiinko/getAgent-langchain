@@ -5,7 +5,9 @@ import { Copy, Check, RotateCcw, FileText, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/types";
 import { extractSuggestions } from "@/lib/suggestions";
+import { extractPostable } from "@/lib/postable";
 import { MarkdownView } from "@/components/MarkdownView";
+import { PostCard } from "@/components/PostCard";
 import { BrandMark } from "@/components/Brand";
 import { TypingDots } from "@/components/ui";
 import { ThinkingLabel } from "@/components/ThinkingLabel";
@@ -52,10 +54,16 @@ export function Message({
   const [copied, setCopied] = useState(false);
   const isUser = msg.role === "user";
 
-  // Split a trailing ```suggest block into clickable quick replies (assistant only).
-  const { body, suggestions } = isUser
+  // Peel off the agent's special blocks (assistant only): ```x post cards and a
+  // trailing ```suggest block of clickable quick replies.
+  const { body: afterSuggest, suggestions } = isUser
     ? { body: msg.content, suggestions: [] as string[] }
     : extractSuggestions(msg.content);
+  const { body, posts } = isUser ? { body: afterSuggest, posts: [] } : extractPostable(afterSuggest);
+
+  const hasAttachments = !!msg.attachedFiles?.length;
+  // Hide the bubble when an assistant turn is only post cards (no prose).
+  const showBubble = isUser || streaming || !!body || msg.isError || hasAttachments;
 
   function copy() {
     void navigator.clipboard.writeText(body);
@@ -83,43 +91,48 @@ export function Message({
       <div
         className={cn("flex min-w-0 max-w-[min(680px,85%)] flex-col", isUser ? "items-end" : "items-start")}
       >
-        <div
-          className={cn(
-            "rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
-            isUser && "rounded-tr-md border border-brand/25 bg-brand/12",
-            !isUser && !msg.isError && "rounded-tl-md border border-border bg-surface",
-            msg.isError && "rounded-tl-md border border-danger/40 bg-danger/10",
-          )}
-        >
-          {msg.isError && (
-            <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-danger">
-              <AlertTriangle className="h-3.5 w-3.5" /> Error
-            </div>
-          )}
-          {msg.attachedFiles && msg.attachedFiles.length > 0 && <Attachments files={msg.attachedFiles} />}
+        {showBubble && (
+          <div
+            className={cn(
+              "rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
+              isUser && "rounded-tr-md border border-brand/25 bg-brand/12",
+              !isUser && !msg.isError && "rounded-tl-md border border-border bg-surface",
+              msg.isError && "rounded-tl-md border border-danger/40 bg-danger/10",
+            )}
+          >
+            {msg.isError && (
+              <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-danger">
+                <AlertTriangle className="h-3.5 w-3.5" /> Error
+              </div>
+            )}
+            {msg.attachedFiles && msg.attachedFiles.length > 0 && <Attachments files={msg.attachedFiles} />}
 
-          {isUser ? (
-            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-          ) : streaming && !body ? (
-            // No tokens yet — show an animated, rotating thinking / tool-status state.
-            <div className="flex items-center gap-2 py-0.5">
-              <TypingDots />
-              <ThinkingLabel status={status} />
-            </div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.25 }}
-              className="flex items-end gap-1"
-            >
-              <MarkdownView content={body} />
-              {streaming && (
-                <span className="mb-1 inline-block h-4 w-[3px] shrink-0 animate-blink rounded-full bg-brand" />
-              )}
-            </motion.div>
-          )}
-        </div>
+            {isUser ? (
+              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+            ) : streaming && !body ? (
+              // No tokens yet — show an animated, rotating thinking / tool-status state.
+              <div className="flex items-center gap-2 py-0.5">
+                <TypingDots />
+                <ThinkingLabel status={status} />
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25 }}
+                className="flex items-end gap-1"
+              >
+                <MarkdownView content={body} />
+                {streaming && (
+                  <span className="mb-1 inline-block h-4 w-[3px] shrink-0 animate-blink rounded-full bg-brand" />
+                )}
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* ready-to-publish X content → "Post on X" cards */}
+        {!isUser && posts.map((p, i) => <PostCard key={i} text={p.text} />)}
 
         {/* clickable quick replies parsed from the agent's ```suggest block */}
         {!isUser && !streaming && suggestions.length > 0 && onSuggest && (
@@ -140,15 +153,17 @@ export function Message({
         )}
 
         {/* action row */}
-        {!isUser && msg.content && !streaming && (
+        {!isUser && !streaming && (body || posts.length > 0) && (
           <div className="mt-1 flex items-center gap-1 px-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              onClick={copy}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted transition hover:text-text"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy"}
-            </button>
+            {body && (
+              <button
+                onClick={copy}
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted transition hover:text-text"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            )}
             {onRegenerate && (
               <button
                 onClick={onRegenerate}

@@ -45,6 +45,21 @@ A combination
 
 Then, after they answer, ask the next single question (what it's about, then the goal) the same way — one question, one \`suggest\` block each — before drafting.`;
 
+// Teaches the model to mark ready-to-publish X/Twitter content. The web client turns
+// a ```x block into a card with a "Post on X" button that opens the X composer prefilled.
+const POSTING_INSTRUCTIONS = `=== ONE-CLICK POSTING TO X (UI capability) ===
+When you produce final, ready-to-publish content for X/Twitter, put the EXACT post text inside a fenced block tagged \`x\`. The UI renders it as a card with a "Post on X" button that opens the X composer with the text already filled in, so the user publishes in one click.
+
+\`\`\`x
+The exact tweet text, ready to publish — no quotes, no commentary.
+\`\`\`
+
+Rules:
+- Put ONLY the publishable text inside the block. Keep any intro, notes, or options in your normal prose OUTSIDE the block, and do NOT repeat the post text in your prose — the card already shows it.
+- One tweet per block. For a thread, output one \`x\` block per tweet, in order.
+- Keep each tweet within 280 characters unless the user explicitly asked otherwise.
+- Use this ONLY for X/Twitter. For Reddit use the Reddit posting flow; for CoinMarketCap just provide the content normally.`;
+
 /** Strip the Reddit auto-posting block unless the user has the `Reddit` label. */
 function stripRedditBlock(prompt: string, labels: string[]): string {
   if (labels.includes("Reddit")) return prompt;
@@ -79,7 +94,7 @@ export async function buildSystemPrompt(opts: {
   let base = BASE_SYSTEM_PROMPT || AGENT_SYSTEM_PROMPT;
   base = stripRedditBlock(base, user.labels);
 
-  let content = `${CORE_GUARDRAILS}\n\n${base}\n\n${QUICK_REPLY_INSTRUCTIONS}`;
+  let content = `${CORE_GUARDRAILS}\n\n${base}\n\n${QUICK_REPLY_INSTRUCTIONS}\n\n${POSTING_INSTRUCTIONS}`;
   if (kbCtx) content += `\n\n=== KNOWLEDGE BASE ===\n${kbCtx}`;
   if (dataCtx) content += `\n\n=== LIVE PLATFORM DATA ===\n${dataCtx}`;
   if (tweetCtx) content += `\n\n=== TWITTER/X CONTENT (via Grok) ===\n${tweetCtx}`;
