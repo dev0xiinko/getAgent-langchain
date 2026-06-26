@@ -32,9 +32,10 @@ export function Login({
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand/20 blur-[120px]" />
       <div className="relative w-full max-w-sm animate-fade-up">
         <div className="mb-7 flex flex-col items-center text-center">
-          <BrandMark className="mb-4 h-14 w-14" />
-          <h1 className="text-2xl font-semibold tracking-tight">GetAgent</h1>
-          <p className="mt-1 text-sm text-muted">Your Bitget BuilderHub assistant</p>
+          <BrandMark className="mb-4 h-16 w-16" />
+          <div className="font-mono text-[10px] font-semibold tracking-[0.32em] text-brand">BITGET</div>
+          <h1 className="mt-1 text-[28px] font-bold tracking-[-0.03em]">Builder Agent</h1>
+          <p className="mt-1.5 font-mono text-xs text-muted">autonomous // build · deploy · iterate</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-xl shadow-black/20">

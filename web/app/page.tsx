@@ -377,7 +377,7 @@ export default function Page() {
                     })}
                     {busy && mode === "image" && (
                       <div className="flex animate-fade-in gap-3">
-                        <BrandMark className="mt-0.5 h-8 w-8 shrink-0" />
+                        <BrandMark className="mt-0.5 h-8 w-8 shrink-0" node={false} />
                         <div className="rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <TypingDots />

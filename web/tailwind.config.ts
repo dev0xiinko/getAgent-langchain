@@ -21,8 +21,16 @@ const config: Config = {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           fg: "rgb(var(--brand-fg) / <alpha-value>)",
           soft: "rgb(var(--brand-soft) / <alpha-value>)",
+          mint: "#34F0CB",
+          teal: "#19C7A8",
+          deep: "#0B9D86",
+          node: "#BDFFF0",
         },
         danger: "rgb(var(--danger) / <alpha-value>)",
+      },
+      backgroundImage: {
+        // Brand Sheet primary gradient.
+        "brand-gradient": "linear-gradient(150deg, #34F0CB 0%, #19C7A8 52%, #0B9D86 100%)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

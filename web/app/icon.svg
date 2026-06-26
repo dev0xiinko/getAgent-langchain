@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Bitget Builder Agent">
+  <defs>
+    <linearGradient id="bgaGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34F0CB"></stop>
+      <stop offset="0.52" stop-color="#19C7A8"></stop>
+      <stop offset="1" stop-color="#0B9D86"></stop>
+    </linearGradient>
+    <linearGradient id="bgaGloss" x1="0" y1="0" x2="0" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"></stop>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+    </linearGradient>
+    <mask id="bgaB">
+      <rect width="512" height="512" fill="black"></rect>
+      <rect x="133" y="102" width="72" height="317" rx="31" fill="white"></rect>
+      <circle cx="281" cy="307" r="113" fill="white"></circle>
+      <circle cx="281" cy="307" r="49" fill="black"></circle>
+    </mask>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgaGrad)"></rect>
+  <rect width="512" height="256" rx="112" fill="url(#bgaGloss)"></rect>
+  <rect width="512" height="512" fill="#06201B" mask="url(#bgaB)"></rect>
+  <circle cx="399" cy="113" r="26" fill="#06201B"></circle>
+  <circle cx="399" cy="113" r="11" fill="#BDFFF0"></circle>
+</svg>

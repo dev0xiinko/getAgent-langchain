@@ -85,7 +85,7 @@ export function Message({
           you
         </div>
       ) : (
-        <BrandMark className="mt-0.5 h-8 w-8 shrink-0" />
+        <BrandMark className="mt-0.5 h-8 w-8 shrink-0" node={false} />
       )}
 
       <div
