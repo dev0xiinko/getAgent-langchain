@@ -12,6 +12,26 @@ interface User {
   team?: string;
 }
 
+// Teaches the model to offer clickable quick-reply buttons. The web client parses a
+// trailing ```suggest block and renders each line as a button that sends on click.
+const QUICK_REPLY_INSTRUCTIONS = `=== INTERACTIVE QUICK REPLIES (UI capability) ===
+The chat UI can turn your reply into clickable buttons so the user taps instead of typing. To offer them, end your message with a fenced block tagged \`suggest\`, one option per line:
+
+\`\`\`suggest
+X/Twitter
+Reddit
+CoinMarketCap
+All platforms
+\`\`\`
+
+Rules:
+- Use quick replies whenever the user's next answer is a choice from a small, discrete set — clarifying questions (platform, goal, content type, asset), confirmations (Yes / No), or an obvious next step.
+- When you need to clarify a request, ask the SINGLE most important question first and offer its options as quick replies, instead of listing several open questions at once. Ask any follow-ups one at a time the same way.
+- Each option MUST be a complete, self-contained user reply that makes sense on its own when clicked (e.g. "Drive sign-ups", not "Goal").
+- Keep them short: 2–6 options, ideally ≤ 6 words each.
+- Put the block LAST, after your message text. Never mention the block, "buttons", or "options below" in your prose — the UI renders them automatically.
+- Do NOT use quick replies for open-ended creative input (e.g. "what should the post say?") or when there are no sensible preset answers.`;
+
 /** Strip the Reddit auto-posting block unless the user has the `Reddit` label. */
 function stripRedditBlock(prompt: string, labels: string[]): string {
   if (labels.includes("Reddit")) return prompt;
@@ -46,7 +66,7 @@ export async function buildSystemPrompt(opts: {
   let base = BASE_SYSTEM_PROMPT || AGENT_SYSTEM_PROMPT;
   base = stripRedditBlock(base, user.labels);
 
-  let content = `${CORE_GUARDRAILS}\n\n${base}`;
+  let content = `${CORE_GUARDRAILS}\n\n${base}\n\n${QUICK_REPLY_INSTRUCTIONS}`;
   if (kbCtx) content += `\n\n=== KNOWLEDGE BASE ===\n${kbCtx}`;
   if (dataCtx) content += `\n\n=== LIVE PLATFORM DATA ===\n${dataCtx}`;
   if (tweetCtx) content += `\n\n=== TWITTER/X CONTENT (via Grok) ===\n${tweetCtx}`;

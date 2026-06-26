@@ -369,6 +369,7 @@ export default function Page() {
                           busy && mode === "chat" && i === messages.length - 1 && m.role === "assistant"
                         }
                         onRegenerate={i === lastAssistantIdx && !busy ? regenerate : undefined}
+                        onSuggest={i === lastAssistantIdx && !busy ? (t) => onSend(t, []) : undefined}
                       />
                     ))}
                     {busy && status && (

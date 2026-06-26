@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Copy, Check, RotateCcw, FileText, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/types";
+import { extractSuggestions } from "@/lib/suggestions";
 import { MarkdownView } from "@/components/MarkdownView";
 import { BrandMark } from "@/components/Brand";
 
@@ -36,16 +37,23 @@ export function Message({
   msg,
   streaming,
   onRegenerate,
+  onSuggest,
 }: {
   msg: ChatMessage;
   streaming?: boolean;
   onRegenerate?: () => void;
+  onSuggest?: (text: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const isUser = msg.role === "user";
 
+  // Split a trailing ```suggest block into clickable quick replies (assistant only).
+  const { body, suggestions } = isUser
+    ? { body: msg.content, suggestions: [] as string[] }
+    : extractSuggestions(msg.content);
+
   function copy() {
-    void navigator.clipboard.writeText(msg.content);
+    void navigator.clipboard.writeText(body);
     setCopied(true);
     setTimeout(() => setCopied(false), 1400);
   }
@@ -83,13 +91,28 @@ export function Message({
             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
           ) : (
             <div className="flex items-end gap-1">
-              <MarkdownView content={msg.content} />
+              <MarkdownView content={body} />
               {streaming && (
                 <span className="mb-1 inline-block h-4 w-[3px] shrink-0 animate-blink rounded-full bg-brand" />
               )}
             </div>
           )}
         </div>
+
+        {/* clickable quick replies parsed from the agent's ```suggest block */}
+        {!isUser && !streaming && suggestions.length > 0 && onSuggest && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => onSuggest(s)}
+                className="rounded-full border border-brand/40 bg-brand/10 px-3 py-1.5 text-[13px] text-brand transition hover:bg-brand/20 active:scale-[0.98]"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* action row */}
         {!isUser && msg.content && !streaming && (
