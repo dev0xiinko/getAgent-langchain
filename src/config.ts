@@ -115,6 +115,7 @@ export const AGENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 // ── Knowledge base ───────────────────────────────────────
 export const KB_TTL = 60_000; // system prompt + KB tree cache TTL
 export const KB_ALWAYS = [
+  "getagent-capabilities",
   "builderhub-website-overview",
   "builderhub-frequently-asked-questions",
   "bitget-company-profile",
