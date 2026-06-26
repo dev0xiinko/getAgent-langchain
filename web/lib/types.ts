@@ -1,3 +1,6 @@
+export type Tab = "chat" | "report" | "kb";
+export type Mode = "chat" | "image";
+
 export interface AttachedFile {
   base64: string;
   name: string;

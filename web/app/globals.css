@@ -1,15 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ────────────────────────────────────────────────────────────
+   Design tokens. Colors are space-separated RGB triplets so they
+   work with Tailwind's `rgb(var(--x) / <alpha>)` color functions.
+   Dark is the default; `.light` on <html> flips to the light set.
+   ──────────────────────────────────────────────────────────── */
 :root {
-  --bg: #0e1116;
-  --panel: #161b22;
-  --panel2: #1c232d;
-  --border: #2a313c;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --accent: #2f81f7;
-  --accent2: #238636;
-  --user: #1f6feb33;
-  --err: #f8514922;
-  --err-border: #f85149;
+  --bg: 13 17 23;
+  --surface: 22 27 34;
+  --surface-2: 28 35 45;
+  --border: 42 49 60;
+  --text: 230 237 243;
+  --muted: 139 148 158;
+  --brand: 25 224 195;
+  --brand-fg: 4 22 19;
+  --brand-soft: 25 224 195;
+  --danger: 248 81 73;
+
+  --font-sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+.light {
+  --bg: 247 248 250;
+  --surface: 255 255 255;
+  --surface-2: 240 243 246;
+  --border: 222 226 232;
+  --text: 17 24 33;
+  --muted: 96 105 117;
+  --brand: 0 173 148;
+  --brand-fg: 255 255 255;
+  --brand-soft: 0 173 148;
+  --danger: 209 52 45;
 }
 
 * {
@@ -17,344 +41,198 @@
 }
 html,
 body {
-  margin: 0;
   height: 100%;
 }
 body {
-  font:
-    14px/1.55 -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: var(--text);
-  background: var(--panel2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 9px;
-}
-button {
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-button.ghost {
-  background: transparent;
-}
-input:focus,
-textarea:focus {
-  outline: 1px solid var(--accent);
-}
-a {
-  color: var(--accent);
-}
-
-/* ── Layout ── */
-.app {
-  display: grid;
-  grid-template-columns: 248px 1fr;
-  height: 100vh;
-}
-.sidebar {
-  border-right: 1px solid var(--border);
-  background: var(--panel);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow-y: auto;
-}
-.sidebar h1 {
   margin: 0;
-  font-size: 16px;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-.sidebar .group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+::selection {
+  background: rgb(var(--brand) / 0.3);
 }
-.sidebar label {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+
+/* Slim, theme-aware scrollbars. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border)) transparent;
 }
-.pill {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 2px 8px;
-  border: 1px solid var(--border);
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
   border-radius: 999px;
-  display: inline-block;
 }
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--muted) / 0.6);
 }
 
-/* ── Tabs ── */
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
+/* ────────────────────────────────────────────────────────────
+   Markdown content. Assistant text is injected as trusted HTML via
+   the in-house renderer, so Tailwind's Preflight reset doesn't reach
+   it — these rules give it readable typography in both themes.
+   ──────────────────────────────────────────────────────────── */
+.md {
+  font-size: 0.94rem;
+  line-height: 1.65;
+  word-break: break-word;
 }
-.tabs button {
-  background: var(--panel2);
-}
-.tabs button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-/* ── Messages ── */
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.empty {
-  color: var(--muted);
-  text-align: center;
-  margin: auto;
-}
-.msg {
-  padding: 10px 13px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  max-width: 82%;
-  word-wrap: break-word;
-}
-.msg.user {
-  background: var(--user);
-  align-self: flex-end;
-}
-.msg.assistant {
-  background: var(--panel);
-  align-self: flex-start;
-}
-.msg.error {
-  background: var(--err);
-  border-color: var(--err-border);
-}
-.msg .role {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.msg .body {
-  white-space: normal;
-}
-.msg .body > :first-child {
+.md > :first-child {
   margin-top: 0;
 }
-.msg .body > :last-child {
+.md > :last-child {
   margin-bottom: 0;
 }
-.msg .body p {
-  margin: 0 0 8px;
+.md p {
+  margin: 0 0 0.75rem;
 }
-.msg .body ul,
-.msg .body ol {
-  margin: 6px 0;
-  padding-left: 22px;
-}
-.msg .body li {
-  margin: 2px 0;
-}
-.msg .body h1,
-.msg .body h2,
-.msg .body h3,
-.msg .body h4,
-.msg .body h5,
-.msg .body h6 {
-  margin: 14px 0 6px;
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  margin: 1.3em 0 0.5em;
   line-height: 1.3;
+  font-weight: 650;
 }
-.msg .body h1 {
-  font-size: 1.45em;
+.md h1 {
+  font-size: 1.4em;
 }
-.msg .body h2 {
-  font-size: 1.28em;
+.md h2 {
+  font-size: 1.25em;
 }
-.msg .body h3 {
-  font-size: 1.13em;
+.md h3 {
+  font-size: 1.1em;
 }
-.msg .body h4,
-.msg .body h5,
-.msg .body h6 {
-  font-size: 1em;
+.md ul,
+.md ol {
+  margin: 0.5rem 0;
+  padding-left: 1.4rem;
 }
-.msg .body img {
+.md li {
+  margin: 0.2rem 0;
+}
+.md li::marker {
+  color: rgb(var(--muted));
+}
+.md a {
+  color: rgb(var(--brand));
+  text-decoration: none;
+  border-bottom: 1px solid rgb(var(--brand) / 0.35);
+}
+.md a:hover {
+  border-bottom-color: rgb(var(--brand));
+}
+.md strong {
+  font-weight: 650;
+  color: rgb(var(--text));
+}
+.md img {
   max-width: 100%;
-  border-radius: 8px;
-  margin-top: 8px;
+  border-radius: 12px;
+  margin-top: 0.5rem;
   display: block;
+  border: 1px solid rgb(var(--border));
 }
-.msg .body code {
-  background: #00000040;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.92em;
+.md blockquote {
+  margin: 0.75rem 0;
+  padding: 0.1rem 0.9rem;
+  border-left: 3px solid rgb(var(--brand) / 0.6);
+  color: rgb(var(--muted));
 }
-.msg .body pre {
-  background: #00000059;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 11px 13px;
-  margin: 8px 0;
+.md :not(pre) > code {
+  background: rgb(var(--brand) / 0.12);
+  color: rgb(var(--text));
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+.md pre {
+  margin: 0.75rem 0;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--border));
+  background: rgb(var(--bg));
+  overflow: hidden;
+}
+.md pre > code {
+  display: block;
+  padding: 0.85rem 1rem;
   overflow-x: auto;
-}
-.msg .body pre code {
-  background: none;
-  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.6;
   white-space: pre;
 }
-.msg .body blockquote {
-  margin: 8px 0;
-  padding: 2px 12px;
-  border-left: 3px solid var(--accent);
-  color: var(--muted);
+/* A header bar wraps each <pre> at runtime (MarkdownView) for the copy button. */
+.code-wrap {
+  margin: 0.75rem 0;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--border));
+  background: rgb(var(--bg));
+  overflow: hidden;
 }
-.msg .body table {
+.code-wrap .code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  color: rgb(var(--muted));
+  border-bottom: 1px solid rgb(var(--border));
+  background: rgb(var(--surface));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.code-wrap pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.code-copy {
+  cursor: pointer;
+  border: 1px solid rgb(var(--border));
+  background: rgb(var(--surface-2));
+  color: rgb(var(--muted));
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+}
+.code-copy:hover {
+  color: rgb(var(--brand));
+  border-color: rgb(var(--brand) / 0.5);
+}
+.md table {
   border-collapse: collapse;
-  margin: 8px 0;
+  margin: 0.75rem 0;
   width: 100%;
-  font-size: 0.95em;
+  font-size: 0.88em;
+  display: block;
+  overflow-x: auto;
 }
-.msg .body th,
-.msg .body td {
-  border: 1px solid var(--border);
-  padding: 5px 9px;
+.md th,
+.md td {
+  border: 1px solid rgb(var(--border));
+  padding: 0.4rem 0.65rem;
   text-align: left;
 }
-.msg .body th {
-  background: var(--panel2);
+.md th {
+  background: rgb(var(--surface-2));
   font-weight: 600;
 }
-.msg .body tbody tr:nth-child(even) {
-  background: #ffffff08;
+.md tbody tr:nth-child(even) {
+  background: rgb(var(--muted) / 0.06);
 }
-.msg .tool {
-  font-size: 11px;
-  color: var(--accent);
-  margin-top: 6px;
-  font-style: italic;
-}
-.status {
-  font-size: 12px;
-  color: var(--accent);
-  font-style: italic;
-  padding: 4px 18px;
-  min-height: 20px;
-}
-
-/* ── Composer ── */
-.composer {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
-  align-items: flex-end;
-}
-.composer textarea {
-  flex: 1;
-  resize: none;
-  min-height: 44px;
-  max-height: 180px;
-}
-.attachments {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 0 16px 8px;
-}
-.chip {
-  font-size: 12px;
-  background: var(--panel2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px 8px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.chip button {
-  padding: 0 4px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-}
-
-/* ── Daily report ── */
-.report {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px;
-}
-.report pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font: inherit;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-}
-.banner {
-  background: var(--err);
-  border: 1px solid var(--err-border);
-  color: #ffb4ab;
-  padding: 8px 16px;
-  font-size: 13px;
-}
-.hidden {
-  display: none !important;
-}
-
-/* ── Knowledge base ── */
-.kb-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.kb-table th,
-.kb-table td {
-  border-bottom: 1px solid var(--border);
-  padding: 8px 10px;
-  text-align: left;
-  vertical-align: top;
-}
-.kb-table th {
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.kb-table tbody tr:hover {
-  background: #ffffff08;
+.md hr {
+  border: 0;
+  border-top: 1px solid rgb(var(--border));
+  margin: 1rem 0;
 }

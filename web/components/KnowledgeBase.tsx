@@ -1,8 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
+import { RefreshCw, DatabaseZap, RotateCw, ArrowLeft, ChevronRight } from "lucide-react";
 import { ApiError, getKbDoc, listKb, reindexKb, syncKb } from "@/lib/api";
-import { renderMarkdown } from "@/lib/markdown";
 import type { KbDocFull, KbDocSummary } from "@/lib/types";
+import { Button, Pill } from "@/components/ui";
+import { MarkdownView } from "@/components/MarkdownView";
+import { cn } from "@/lib/cn";
+
+const STATUS_STYLE: Record<string, string> = {
+  published: "bg-brand/15 text-brand",
+  draft: "bg-muted/15 text-muted",
+  archived: "bg-danger/15 text-danger",
+};
 
 export function KnowledgeBase({ uid }: { uid: string }) {
   const [docs, setDocs] = useState<KbDocSummary[]>([]);
@@ -59,71 +68,98 @@ export function KnowledgeBase({ uid }: { uid: string }) {
   }
 
   return (
-    <div className="report">
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-        <button className="primary" onClick={() => run("Syncing", () => syncKb(uid))} disabled={!!busy}>
-          {busy === "Syncing" ? "Syncing… (~8s)" : "Sync now"}
-        </button>
-        <button className="ghost" onClick={() => run("Reindexing", () => reindexKb(uid))} disabled={!!busy}>
-          {busy === "Reindexing" ? "Reindexing…" : "Reindex"}
-        </button>
-        <button className="ghost" onClick={() => void load()} disabled={loading}>
+    <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-5 md:px-6">
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <h2 className="mr-auto text-lg font-semibold tracking-tight">Knowledge base</h2>
+        <Pill>{docs.length} docs</Pill>
+        {!larkSyncEnabled && <Pill className="text-danger">Lark sync off</Pill>}
+        <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
+          <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
           Refresh
-        </button>
-        <span className="pill">{docs.length} docs</span>
-        {!larkSyncEnabled && <span className="pill">Lark sync off</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => run("Reindexing", () => reindexKb(uid))}
+          disabled={!!busy}
+        >
+          <RotateCw className={cn("h-3.5 w-3.5", busy === "Reindexing" && "animate-spin")} />
+          {busy === "Reindexing" ? "Reindexing…" : "Reindex"}
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => run("Syncing", () => syncKb(uid))}
+          disabled={!!busy}
+        >
+          <DatabaseZap className="h-3.5 w-3.5" />
+          {busy === "Syncing" ? "Syncing… (~8s)" : "Sync now"}
+        </Button>
       </div>
 
-      {error && <div className="banner">{error}</div>}
-
-      {open && (
-        <div style={{ marginBottom: 12 }}>
-          <button className="ghost" onClick={() => setOpen(null)}>
-            ← Back to list
-          </button>
-          <div className="msg assistant" style={{ maxWidth: "100%", marginTop: 8 }}>
-            <div className="role">
-              {open.docId} · {open.status} · {open.source}
-            </div>
-            <div className="body" dangerouslySetInnerHTML={{ __html: renderMarkdown(open.body || "") }} />
-          </div>
+      {error && (
+        <div className="mb-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] text-danger">
+          {error}
         </div>
       )}
 
-      {!open &&
-        (loading ? (
-          <div className="empty">Loading…</div>
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+        {open ? (
+          <div className="animate-fade-in">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(null)} className="mb-3">
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to list
+            </Button>
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
+                <span className="font-medium">{open.title || open.docId}</span>
+                <span
+                  className={cn("rounded px-1.5 py-px text-[11px] font-medium", STATUS_STYLE[open.status])}
+                >
+                  {open.status}
+                </span>
+                <Pill>{open.source}</Pill>
+              </div>
+              <MarkdownView content={open.body} />
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="grid h-40 place-items-center text-sm text-muted">Loading…</div>
         ) : docs.length === 0 ? (
-          <div className="empty">No KB documents yet. Click “Sync now” to pull from Lark.</div>
+          <div className="grid h-40 place-items-center text-sm text-muted">
+            No KB documents yet. Click “Sync now” to pull from Lark.
+          </div>
         ) : (
-          <table className="kb-table">
-            <thead>
-              <tr>
-                <th>Title / id</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Embedded</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => (
-                <tr key={d.docId} onClick={() => void view(d.docId)} style={{ cursor: "pointer" }}>
-                  <td>
-                    {d.title || <span style={{ color: "var(--muted)" }}>{d.docId}</span>}
-                    {d.title && <div style={{ color: "var(--muted)", fontSize: 11 }}>{d.docId}</div>}
-                  </td>
-                  <td>{String(d.meta?.category ?? "—")}</td>
-                  <td>{d.status}</td>
-                  <td>{d.source}</td>
-                  <td>{d.embedded ? "✓" : "—"}</td>
-                  <td>{d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+          <div className="flex flex-col gap-2">
+            {docs.map((d) => (
+              <button
+                key={d.docId}
+                onClick={() => void view(d.docId)}
+                className="group flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left transition hover:border-brand/40 hover:bg-surface2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{d.title || d.docId}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
+                    <span>{d.docId}</span>
+                    {d.meta?.category && <span>· {String(d.meta.category)}</span>}
+                    {d.updatedAt && <span>· {new Date(d.updatedAt).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+                <span className={cn("rounded px-1.5 py-px text-[11px] font-medium", STATUS_STYLE[d.status])}>
+                  {d.status}
+                </span>
+                <span className="hidden text-[11px] text-muted sm:inline">{d.source}</span>
+                <span
+                  className={cn("text-xs", d.embedded ? "text-brand" : "text-muted")}
+                  title={d.embedded ? "embedded" : "not embedded"}
+                >
+                  {d.embedded ? "● indexed" : "○"}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-text" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
