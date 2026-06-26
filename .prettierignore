@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.claude/
+web/.next/
+web/node_modules/
+web/tsconfig.tsbuildinfo
+package-lock.json
+web/package-lock.json
+
+# Large generated / vendored content — leave as-is
+src/agent/kb/docs.ts
+public/index.html
+docs/reports/

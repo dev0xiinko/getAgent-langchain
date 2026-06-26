@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" viewBox="0 0 860 520" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <style>
+      .box  { rx:10; ry:10; stroke-width:1.5; }
+      .lbl  { font-size:13px; font-weight:600; fill:#0f172a; }
+      .sub  { font-size:11px; fill:#475569; }
+      .edge { stroke:#94a3b8; stroke-width:1.5; fill:none; marker-end:url(#arrow); }
+      .grp  { font-size:12px; font-weight:700; fill:#64748b; letter-spacing:.05em; }
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="860" height="520" fill="#f8fafc"/>
+  <text x="28" y="40" font-size="20" font-weight="800" fill="#0f172a">GetAgent — LangChain.js rebuild · architecture</text>
+  <text x="28" y="62" class="sub">Express + MongoDB · OpenRouter gateway · SSE two-call pipeline</text>
+
+  <!-- Client -->
+  <text x="28" y="100" class="grp">CLIENT</text>
+  <rect class="box" x="28" y="110" width="200" height="64" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="44" y="136" class="lbl">Next.js web/ + public/</text>
+  <text x="44" y="156" class="sub">streamChat() · SSE reader</text>
+
+  <!-- API -->
+  <text x="320" y="100" class="grp">EXPRESS · /server/agent/*</text>
+  <rect class="box" x="320" y="110" width="220" height="64" fill="#f0fdf4" stroke="#22c55e"/>
+  <text x="336" y="136" class="lbl">routes/agent.ts</text>
+  <text x="336" y="156" class="sub">gateUser → allowlist + role</text>
+
+  <!-- Pipeline -->
+  <text x="320" y="210" class="grp">CHAT PIPELINE</text>
+  <rect class="box" x="320" y="220" width="220" height="88" fill="#fefce8" stroke="#eab308"/>
+  <text x="336" y="246" class="lbl">chatPipeline.ts</text>
+  <text x="336" y="266" class="sub">Call 1 — tools (45s)</text>
+  <text x="336" y="284" class="sub">Call 2 — stream, no tools (90s)</text>
+
+  <!-- System prompt -->
+  <rect class="box" x="28" y="220" width="220" height="88" fill="#faf5ff" stroke="#a855f7"/>
+  <text x="44" y="246" class="lbl">systemPrompt.ts</text>
+  <text x="44" y="266" class="sub">CORE_GUARDRAILS + vault</text>
+  <text x="44" y="284" class="sub">+ KB RAG + live data + Grok</text>
+
+  <!-- Tools -->
+  <text x="620" y="210" class="grp">TOOLS (5)</text>
+  <rect class="box" x="620" y="220" width="212" height="120" fill="#fff1f2" stroke="#f43f5e"/>
+  <text x="636" y="246" class="lbl">tools/index.ts</text>
+  <text x="636" y="266" class="sub">search_web</text>
+  <text x="636" y="284" class="sub">get_crypto_news</text>
+  <text x="636" y="302" class="sub">get_market_signals</text>
+  <text x="636" y="320" class="sub">search_twitter · stock_movers</text>
+
+  <!-- OpenRouter -->
+  <text x="320" y="360" class="grp">MODEL GATEWAY</text>
+  <rect class="box" x="320" y="370" width="220" height="64" fill="#ecfeff" stroke="#06b6d4"/>
+  <text x="336" y="396" class="lbl">OpenRouter</text>
+  <text x="336" y="416" class="sub">claude-sonnet-4-6 · gemini · grok</text>
+
+  <!-- Mongo -->
+  <text x="620" y="100" class="grp">PERSISTENCE</text>
+  <rect class="box" x="620" y="110" width="212" height="64" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="636" y="136" class="lbl">MongoDB (mongoose)</text>
+  <text x="636" y="156" class="sub">Session · Usage · Report · UserMeta</text>
+
+  <!-- KB / cron -->
+  <text x="28" y="360" class="grp">BACKGROUND</text>
+  <rect class="box" x="28" y="370" width="220" height="64" fill="#f5f5f4" stroke="#78716c"/>
+  <text x="44" y="396" class="lbl">warmKb() · cron dailyReport</text>
+  <text x="44" y="416" class="sub">embed on boot, never in request</text>
+
+  <!-- edges -->
+  <path class="edge" d="M228,142 L320,142"/>
+  <path class="edge" d="M430,174 L430,220"/>
+  <path class="edge" d="M320,264 L248,264"/>
+  <path class="edge" d="M540,264 L620,264"/>
+  <path class="edge" d="M430,308 L430,370"/>
+  <path class="edge" d="M540,150 L620,142"/>
+  <path class="edge" d="M620,300 C580,360 540,360 540,402" />
+
+  <text x="28" y="486" class="sub">P0/P1 audit fixes folded in: non-overridable guardrails · gray-matter frontmatter (default-deny) · fenced reference data · KB embed off request path.</text>
+  <text x="28" y="506" class="sub">Single tool round by design — no looping ReAct agent.</text>
+</svg>
