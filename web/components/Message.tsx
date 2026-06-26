@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Copy, Check, RotateCcw, FileText, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/types";
@@ -7,6 +8,7 @@ import { extractSuggestions } from "@/lib/suggestions";
 import { MarkdownView } from "@/components/MarkdownView";
 import { BrandMark } from "@/components/Brand";
 import { TypingDots } from "@/components/ui";
+import { ThinkingLabel } from "@/components/ThinkingLabel";
 
 function Attachments({ files }: { files: NonNullable<ChatMessage["attachedFiles"]> }) {
   return (
@@ -62,7 +64,13 @@ export function Message({
   }
 
   return (
-    <div className={cn("group flex w-full animate-fade-in gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className={cn("group flex w-full gap-3", isUser ? "flex-row-reverse" : "flex-row")}
+    >
       {/* avatar */}
       {isUser ? (
         <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface2 text-[11px] font-semibold uppercase text-muted">
@@ -93,18 +101,23 @@ export function Message({
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
           ) : streaming && !body ? (
-            // No tokens yet — show an animated thinking / tool-status state.
+            // No tokens yet — show an animated, rotating thinking / tool-status state.
             <div className="flex items-center gap-2 py-0.5">
               <TypingDots />
-              <span className="shimmer text-[15px]">{status?.trim() || "Thinking…"}</span>
+              <ThinkingLabel status={status} />
             </div>
           ) : (
-            <div className="flex items-end gap-1">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.25 }}
+              className="flex items-end gap-1"
+            >
               <MarkdownView content={body} />
               {streaming && (
                 <span className="mb-1 inline-block h-4 w-[3px] shrink-0 animate-blink rounded-full bg-brand" />
               )}
-            </div>
+            </motion.div>
           )}
         </div>
 
@@ -112,13 +125,16 @@ export function Message({
         {!isUser && !streaming && suggestions.length > 0 && onSuggest && (
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.map((s, i) => (
-              <button
+              <motion.button
                 key={i}
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.25, delay: i * 0.05, ease: "easeOut" }}
                 onClick={() => onSuggest(s)}
                 className="rounded-full border border-brand/40 bg-brand/10 px-3 py-1.5 text-[13px] text-brand transition hover:bg-brand/20 active:scale-[0.98]"
               >
                 {s}
-              </button>
+              </motion.button>
             ))}
           </div>
         )}
@@ -146,6 +162,6 @@ export function Message({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
