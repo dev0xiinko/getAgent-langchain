@@ -9,7 +9,7 @@
 | **Stack** | LangChain.js · Express 4 · Mongoose 8 · Zod 3 |
 | **Gateway** | OpenRouter (`anthropic/claude-sonnet-4-6` default) |
 | **Frontend** | Next.js (`web/`) + zero-build test client (`public/index.html`) |
-| **Status** | Core pipeline complete · a few seams left as TODO |
+| **Status** | Feature-complete · typecheck + 51 tests green · live-key validation pending ([`DEVELOPMENT_STATUS.md`](../../DEVELOPMENT_STATUS.md)) |
 
 ---
 
@@ -157,13 +157,19 @@ export const CHAT_PROVIDER = {
 
 ---
 
-## 8. Seams still wired as TODO
+## 8. Seams — now implemented
 
-- [ ] `agent/dataContext.ts` — announcements / campaigns caches + `isCampaignEligible`
-- [ ] `agent/dailyReport.ts` — `aggregateSources()` (news / Twitter / Brave / CoinGecko / Yahoo)
-- [ ] `agent/image.ts` — real `BITGET_LOGO_URL`
-- [ ] `DELETE /session` — Cloudinary cleanup of session images
-- [ ] `PATCH /posted` — the actual Reddit posting webhook
+All of the seams originally left as TODO have since been wired. They are now feature-complete in code;
+what remains is validation against live credentials (see [`DEVELOPMENT_STATUS.md`](../../DEVELOPMENT_STATUS.md)).
+
+- [x] `agent/dataContext.ts` — announcements / campaigns caches + `isCampaignEligible`
+- [x] `agent/dailyReport.ts` — `aggregateSources()` (news / Twitter / Brave / CoinGecko / Yahoo)
+- [x] `agent/image.ts` — real `BITGET_LOGO_URL`
+- [x] `DELETE /session` — Cloudinary cleanup of session images (`deleteImagesByUrl`)
+- [x] `PATCH /posted` — the actual Reddit posting webhook (`fireRedditWebhook`)
+
+> Current dev status, including what still needs live-key validation, lives in
+> [`DEVELOPMENT_STATUS.md`](../../DEVELOPMENT_STATUS.md).
 
 ---
 
