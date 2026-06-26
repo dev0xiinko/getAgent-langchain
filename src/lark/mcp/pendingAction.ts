@@ -9,7 +9,7 @@
  */
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { makeChat } from "../../llm/providers";
-import { AgentSession, type PendingAction } from "../../models/AgentSession";
+import { AgentSession, LARK_SESSION_ID, type PendingAction } from "../../models/AgentSession";
 
 export const PENDING_TTL_MS = 10 * 60_000;
 
@@ -84,24 +84,26 @@ export async function classifyReply(message: string, preview: string): Promise<R
 }
 
 // ── Persistence ──────────────────────────────────────────
+// Lark pending writes live on the reserved Lark session document, isolated from
+// the user's chat conversations.
 export async function setPending(
   uid: string,
   action: { toolName: string; args: unknown; preview: string },
 ): Promise<void> {
   await AgentSession.updateOne(
-    { uid },
+    { uid, sessionId: LARK_SESSION_ID },
     { $set: { pendingAction: { ...action, createdAt: new Date() } } },
     { upsert: true },
   );
 }
 
 export async function clearPending(uid: string): Promise<void> {
-  await AgentSession.updateOne({ uid }, { $set: { pendingAction: null } });
+  await AgentSession.updateOne({ uid, sessionId: LARK_SESSION_ID }, { $set: { pendingAction: null } });
 }
 
 /** Return the pending action if present and not stale; clears + returns null if stale. */
 export async function getFreshPending(uid: string): Promise<PendingAction | null> {
-  const session = await AgentSession.findOne({ uid }).lean();
+  const session = await AgentSession.findOne({ uid, sessionId: LARK_SESSION_ID }).lean();
   const p = session?.pendingAction as PendingAction | null | undefined;
   if (!p) return null;
   if (isPendingStale(p.createdAt as Date)) {

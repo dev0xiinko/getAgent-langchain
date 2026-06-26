@@ -9,7 +9,7 @@ import { runDailyReport, getDailyReport } from "../agent/dailyReport";
 import { runLarkChat } from "../agent/larkAgent";
 import { larkMcpReady } from "../lark/mcp/client";
 import { runKbSync, reindexKb } from "../agent/kb/larkSync";
-import { AgentSession } from "../models/AgentSession";
+import { AgentSession, LARK_SESSION_ID } from "../models/AgentSession";
 import { KbDoc } from "../models/KbDoc";
 import { config } from "../config";
 import { logger } from "../logger";
@@ -44,12 +44,24 @@ async function gateUser(req: Request, res: Response, uid?: string) {
   return user;
 }
 
+/** Conversation used when a client doesn't supply a sessionId (e.g. the zero-build test client). */
+const DEFAULT_SESSION_ID = "default";
+
+/** Validate a client-supplied conversation id; rejects empties and the reserved Lark id. */
+function normalizeSessionId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim();
+  if (!v || v.length > 128 || v === LARK_SESSION_ID) return null;
+  return v;
+}
+
 // ── POST /server/agent/chat  (SSE) ───────────────────────
 agentRouter.post("/chat", async (req: Request, res: Response) => {
-  const { uid, message, attachedFiles } = req.body ?? {};
+  const { uid, sessionId, message, attachedFiles } = req.body ?? {};
   if (!message || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({ error: "message required" });
   }
+  const sid = normalizeSessionId(sessionId) ?? DEFAULT_SESSION_ID;
   const user = await gateUser(req, res, uid);
   if (!user) return;
 
@@ -59,13 +71,14 @@ agentRouter.post("/chat", async (req: Request, res: Response) => {
     if (!gate.ok) return res.status(429).json({ error: "daily_limit", resetAt: gate.resetAt });
   }
 
-  await runChat({ res, user, leader, message: message.trim(), attachedFiles });
+  await runChat({ res, user, leader, sessionId: sid, message: message.trim(), attachedFiles });
 });
 
 // ── POST /server/agent/image  (JSON) ─────────────────────
 agentRouter.post("/image", async (req: Request, res: Response) => {
-  const { uid, prompt, referenceImage, attachedFile, aspectRatio } = req.body ?? {};
+  const { uid, sessionId, prompt, referenceImage, attachedFile, aspectRatio } = req.body ?? {};
   if (!prompt || typeof prompt !== "string") return res.status(400).json({ error: "prompt required" });
+  const sid = normalizeSessionId(sessionId) ?? DEFAULT_SESSION_ID;
 
   const user = await gateUser(req, res, uid);
   if (!user) return;
@@ -81,7 +94,7 @@ agentRouter.post("/image", async (req: Request, res: Response) => {
     if (!raw) return res.status(500).json({ error: "No image returned, please try again" });
 
     const url = raw.startsWith("data:") ? await uploadImageToCloudinary(raw) : raw;
-    await persistImageMessages(uid, prompt, url);
+    await persistImageMessages(uid, sid, prompt, url);
     if (!leader) await incrementUsage(uid, "image");
     res.json({ url });
   } catch (e) {
@@ -122,25 +135,78 @@ agentRouter.get("/me", async (req: Request, res: Response) => {
   });
 });
 
+// ── GET /server/agent/sessions ───────────────────────────
+// Conversation history list for the sidebar (newest first, lightweight: no message
+// bodies, just title/preview/counts). Excludes the reserved Lark session.
+agentRouter.get("/sessions", async (req: Request, res: Response) => {
+  const user = await gateUser(req, res, req.query.uid as string);
+  if (!user) return;
+  const sessions = await AgentSession.aggregate([
+    { $match: { uid: user.uid, sessionId: { $ne: LARK_SESSION_ID } } },
+    { $sort: { updatedAt: -1 } },
+    {
+      $project: {
+        _id: 0,
+        sessionId: 1,
+        title: 1,
+        updatedAt: 1,
+        createdAt: 1,
+        messageCount: { $size: { $ifNull: ["$messages", []] } },
+        preview: {
+          $substrCP: [{ $ifNull: [{ $arrayElemAt: ["$messages.content", -1] }, ""] }, 0, 120],
+        },
+      },
+    },
+  ]);
+  res.json({ sessions });
+});
+
 // ── GET /server/agent/session ────────────────────────────
+// Messages for one conversation. Without `sessionId`, returns the most recent
+// conversation (back-compat / initial load).
 agentRouter.get("/session", async (req: Request, res: Response) => {
   const user = await gateUser(req, res, req.query.uid as string);
   if (!user) return;
-  const session = await AgentSession.findOne({ uid: user.uid }).lean();
-  res.json({ messages: session?.messages ?? [], postedIds: session?.postedIds ?? [] });
+  const sid = normalizeSessionId(req.query.sessionId);
+  const query = sid
+    ? { uid: user.uid, sessionId: sid }
+    : { uid: user.uid, sessionId: { $ne: LARK_SESSION_ID } };
+  const session = await AgentSession.findOne(query).sort({ updatedAt: -1 }).lean();
+  res.json({
+    sessionId: session?.sessionId ?? null,
+    title: session?.title ?? "",
+    messages: session?.messages ?? [],
+    postedIds: session?.postedIds ?? [],
+  });
+});
+
+// ── PATCH /server/agent/session ──────────────────────────  (rename a conversation)
+agentRouter.patch("/session", async (req: Request, res: Response) => {
+  const user = await gateUser(req, res, req.body?.uid);
+  if (!user) return;
+  const sid = normalizeSessionId(req.body?.sessionId);
+  if (!sid) return res.status(400).json({ error: "sessionId required" });
+  const title = String(req.body?.title ?? "")
+    .trim()
+    .slice(0, 120);
+  if (!title) return res.status(400).json({ error: "title required" });
+  await AgentSession.updateOne({ uid: user.uid, sessionId: sid }, { $set: { title } });
+  res.json({ ok: true, title });
 });
 
 // ── DELETE /server/agent/session ─────────────────────────
 agentRouter.delete("/session", async (req: Request, res: Response) => {
   const user = await gateUser(req, res, (req.body?.uid ?? req.query.uid) as string);
   if (!user) return;
+  const sid = normalizeSessionId(req.body?.sessionId ?? req.query.sessionId);
+  if (!sid) return res.status(400).json({ error: "sessionId required" });
 
-  // Clean up this session's generated images from Cloudinary (fire-and-forget).
-  const session = await AgentSession.findOne({ uid: user.uid }).lean();
+  // Clean up this conversation's generated images from Cloudinary (fire-and-forget).
+  const session = await AgentSession.findOne({ uid: user.uid, sessionId: sid }).lean();
   const urls = imageUrlsFromSession(session?.messages as Array<{ content?: string }>);
   if (urls.length) void deleteImagesByUrl(urls);
 
-  await AgentSession.deleteOne({ uid: user.uid });
+  await AgentSession.deleteOne({ uid: user.uid, sessionId: sid });
   res.json({ ok: true });
 });
 
@@ -153,12 +219,14 @@ agentRouter.get("/usage", async (req: Request, res: Response) => {
 
 // ── PATCH /server/agent/posted ───────────────────────────
 agentRouter.patch("/posted", async (req: Request, res: Response) => {
-  const { uid, postedId } = req.body ?? {};
+  const { uid, sessionId, postedId } = req.body ?? {};
   const user = await gateUser(req, res, uid);
   if (!user) return;
   if (postedId == null) return res.status(400).json({ error: "postedId required" });
 
-  await AgentSession.updateOne({ uid }, { $addToSet: { postedIds: String(postedId) } });
+  const sid = normalizeSessionId(sessionId);
+  const query = sid ? { uid, sessionId: sid } : { uid, sessionId: { $ne: LARK_SESSION_ID } };
+  await AgentSession.updateOne(query, { $addToSet: { postedIds: String(postedId) } });
 
   // Trigger the real Reddit post via the configured webhook (fire-and-forget, 8s cap).
   if (config.redditWebhookUrl) {

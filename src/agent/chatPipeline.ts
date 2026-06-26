@@ -42,6 +42,7 @@ interface RunChatArgs {
   res: Response;
   user: AuthedUser;
   leader: boolean;
+  sessionId: string;
   message: string;
   attachedFiles?: AttachedFile[];
 }
@@ -55,6 +56,7 @@ export async function runChat({
   res,
   user,
   leader,
+  sessionId,
   message,
   attachedFiles = [],
 }: RunChatArgs): Promise<void> {
@@ -66,8 +68,8 @@ export async function runChat({
   let isError = false;
 
   try {
-    const history = await loadHistory(user.uid);
-    await persistUserMessage(user.uid, message, attachedFiles);
+    const history = await loadHistory(user.uid, sessionId);
+    await persistUserMessage(user.uid, sessionId, message, attachedFiles);
 
     const [systemContent, userContent] = await Promise.all([
       buildSystemPrompt({ user, query: message, history }),
@@ -130,7 +132,7 @@ export async function runChat({
   }
 
   // Persist + meter (after the stream is closed).
-  await persistAssistant(user.uid, fullResponse, toolUsed, isError).catch((e) =>
+  await persistAssistant(user.uid, sessionId, fullResponse, toolUsed, isError).catch((e) =>
     console.error("[chat] persist failed:", e),
   );
   if (!leader && !isError) {

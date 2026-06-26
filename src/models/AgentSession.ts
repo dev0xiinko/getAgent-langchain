@@ -27,9 +27,20 @@ const PendingActionSchema = new Schema(
   { _id: false },
 );
 
+/**
+ * A user owns many conversations, one document each, keyed by (uid, sessionId).
+ * The reserved Lark session below keeps the leader-only Lark agent's history and
+ * pending-write state isolated from the user-visible chat sessions.
+ */
+export const LARK_SESSION_ID = "__lark__";
+
 const AgentSessionSchema = new Schema(
   {
-    uid: { type: String, required: true, unique: true, index: true },
+    uid: { type: String, required: true, index: true },
+    // Client-generated conversation id (uuid). Unique per uid; see compound index below.
+    sessionId: { type: String, required: true },
+    // Auto-derived from the first user message; shown in the history list.
+    title: { type: String, default: "" },
     messages: { type: [MessageSchema], default: [] },
     postedIds: { type: [String], default: [] },
     // At most one pending Lark write at a time; null when nothing awaits confirmation.
@@ -37,6 +48,9 @@ const AgentSessionSchema = new Schema(
   },
   { timestamps: true },
 );
+
+// One conversation per (uid, sessionId).
+AgentSessionSchema.index({ uid: 1, sessionId: 1 }, { unique: true });
 
 export type AgentMessage = mongoose.InferSchemaType<typeof MessageSchema>;
 export type PendingAction = mongoose.InferSchemaType<typeof PendingActionSchema>;

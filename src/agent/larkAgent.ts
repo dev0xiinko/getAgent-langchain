@@ -13,6 +13,7 @@ import { makeChat } from "../llm/providers";
 import { makeSse } from "./sse";
 import { streamCall2 } from "./chatPipeline";
 import { loadHistory, persistUserMessage, persistAssistant } from "./history";
+import { LARK_SESSION_ID } from "../models/AgentSession";
 import { buildLarkSystemPrompt } from "./larkSystemPrompt";
 import { getLarkMcp, resetLarkMcp } from "../lark/mcp/client";
 import { isWriteTool } from "../lark/mcp/classify";
@@ -69,7 +70,7 @@ export async function runLarkChat({ res, user, message }: RunLarkArgs): Promise<
   let crashed = false;
 
   try {
-    await persistUserMessage(user.uid, message);
+    await persistUserMessage(user.uid, LARK_SESSION_ID, message);
     const { client: _client, tools, byName } = await getLarkMcp();
     void _client;
 
@@ -108,7 +109,7 @@ export async function runLarkChat({ res, user, message }: RunLarkArgs): Promise<
 
     // ── 2) Capped multi-round tool loop. ──
     if (!handled) {
-      const history = await loadHistory(user.uid);
+      const history = await loadHistory(user.uid, LARK_SESSION_ID);
       const today = new Date().toLocaleDateString("en-US", {
         weekday: "long",
         year: "numeric",
@@ -187,7 +188,7 @@ export async function runLarkChat({ res, user, message }: RunLarkArgs): Promise<
   // request respawns it.
   if (crashed) resetLarkMcp();
 
-  await persistAssistant(user.uid, fullResponse, toolUsed, isError).catch((e) =>
+  await persistAssistant(user.uid, LARK_SESSION_ID, fullResponse, toolUsed, isError).catch((e) =>
     logger.error("[lark] persist failed", { message: (e as Error).message }),
   );
 }

@@ -6,6 +6,7 @@ import type {
   KbDocFull,
   KbDocSummary,
   Me,
+  SessionSummary,
   Usage,
 } from "./types";
 
@@ -43,18 +44,31 @@ export const seedUser = (body: { uid: string; role?: string; labels?: string[]; 
     body: JSON.stringify(body),
   }).then(asJson<{ ok: true; user: unknown }>);
 
-// ── Session ───────────────────────────────────────────────
-export const getSession = (uid: string) =>
-  fetch(api(`/session?uid=${encodeURIComponent(uid)}`)).then(
-    asJson<{ messages: ChatMessage[]; postedIds: string[] }>,
-  );
+// ── Sessions (conversation history) ───────────────────────
+export const listSessions = (uid: string) =>
+  fetch(api(`/sessions?uid=${encodeURIComponent(uid)}`)).then(asJson<{ sessions: SessionSummary[] }>);
 
-export const clearSession = (uid: string) =>
+export const getSession = (uid: string, sessionId?: string) => {
+  const q = new URLSearchParams({ uid });
+  if (sessionId) q.set("sessionId", sessionId);
+  return fetch(api(`/session?${q.toString()}`)).then(
+    asJson<{ sessionId: string | null; title: string; messages: ChatMessage[]; postedIds: string[] }>,
+  );
+};
+
+export const clearSession = (uid: string, sessionId: string) =>
   fetch(api(`/session`), {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uid }),
+    body: JSON.stringify({ uid, sessionId }),
   }).then(asJson<{ ok: true }>);
+
+export const renameSession = (uid: string, sessionId: string, title: string) =>
+  fetch(api(`/session`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid, sessionId, title }),
+  }).then(asJson<{ ok: true; title: string }>);
 
 // ── Usage ─────────────────────────────────────────────────
 export const getUsage = (uid: string) =>
@@ -63,6 +77,7 @@ export const getUsage = (uid: string) =>
 // ── Image generation ──────────────────────────────────────
 export const generateImage = (body: {
   uid: string;
+  sessionId: string;
   prompt: string;
   aspectRatio?: string;
   // Both are base64 data-URL strings (the backend calls .startsWith on them).
@@ -116,7 +131,7 @@ export const reindexKb = (uid: string) =>
  * handled internally; the generator simply ends on `[DONE]` or stream close.
  */
 export async function* streamChat(
-  body: { uid: string; message: string; attachedFiles?: AttachedFile[] },
+  body: { uid: string; sessionId: string; message: string; attachedFiles?: AttachedFile[] },
   signal?: AbortSignal,
 ): AsyncGenerator<ChatFrame> {
   const res = await fetch(api(`/chat`), {

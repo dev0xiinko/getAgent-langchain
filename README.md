@@ -160,23 +160,25 @@ and images. Input is HTML-escaped first and only a fixed tag set is emitted, so 
 
 ## Endpoints
 
-| Method | Path                                  | Notes                                   |
-| ------ | ------------------------------------- | --------------------------------------- |
-| GET    | `/health`                             | liveness probe                          |
-| POST   | `/server/agent/chat`                  | SSE; two-call tool pipeline             |
-| POST   | `/server/agent/image`                 | JSON `{ url }`                          |
-| POST   | `/server/agent/lark`                  | SSE; Lark agent (leaders, 404 if off)   |
-| GET    | `/server/agent/me`                    | server-derived role / labels / leader   |
-| GET    | `/server/agent/session`               | `{ messages, postedIds }`               |
-| DELETE | `/server/agent/session`               | clears session + Cloudinary cleanup     |
-| GET    | `/server/agent/usage`                 | counts + limits + resetAt               |
-| PATCH  | `/server/agent/posted`                | mark Reddit post done + fire webhook    |
-| GET    | `/server/agent/daily-report`          | leaders only                            |
-| POST   | `/server/agent/daily-report/generate` | leaders only, fire-and-forget           |
-| GET    | `/server/agent/kb`                    | leaders; KB doc summaries               |
-| GET    | `/server/agent/kb/:id`                | leaders; one doc (with body)            |
-| POST   | `/server/agent/kb/sync`               | leaders; Lark→KB sync (fire-and-forget) |
-| POST   | `/server/agent/kb/reindex`            | leaders; re-embed all published docs    |
+| Method | Path                                  | Notes                                                              |
+| ------ | ------------------------------------- | ------------------------------------------------------------------ |
+| GET    | `/health`                             | liveness probe                                                     |
+| POST   | `/server/agent/chat`                  | SSE; two-call tool pipeline (needs `sessionId`)                    |
+| POST   | `/server/agent/image`                 | JSON `{ url }` (needs `sessionId`)                                 |
+| POST   | `/server/agent/lark`                  | SSE; Lark agent (leaders, 404 if off)                              |
+| GET    | `/server/agent/me`                    | server-derived role / labels / leader                              |
+| GET    | `/server/agent/sessions`              | conversation history list (newest first)                           |
+| GET    | `/server/agent/session`               | `{ sessionId, title, messages, postedIds }` (optional `sessionId`) |
+| PATCH  | `/server/agent/session`               | rename a conversation (`{ sessionId, title }`)                     |
+| DELETE | `/server/agent/session`               | delete one conversation + Cloudinary cleanup                       |
+| GET    | `/server/agent/usage`                 | counts + limits + resetAt                                          |
+| PATCH  | `/server/agent/posted`                | mark Reddit post done + fire webhook                               |
+| GET    | `/server/agent/daily-report`          | leaders only                                                       |
+| POST   | `/server/agent/daily-report/generate` | leaders only, fire-and-forget                                      |
+| GET    | `/server/agent/kb`                    | leaders; KB doc summaries                                          |
+| GET    | `/server/agent/kb/:id`                | leaders; one doc (with body)                                       |
+| POST   | `/server/agent/kb/sync`               | leaders; Lark→KB sync (fire-and-forget)                            |
+| POST   | `/server/agent/kb/reindex`            | leaders; re-embed all published docs                               |
 
 ## Audit fixes applied
 

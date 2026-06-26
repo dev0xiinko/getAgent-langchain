@@ -33,6 +33,15 @@ export interface Usage {
   resetAt: number | null;
 }
 
+export interface SessionSummary {
+  sessionId: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
 export interface DailyReport {
   date: string;
   content: string;

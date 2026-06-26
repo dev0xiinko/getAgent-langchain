@@ -8,10 +8,11 @@ import {
   getMe,
   getSession,
   getUsage,
+  listSessions,
   seedUser,
   streamChat,
 } from "@/lib/api";
-import type { AttachedFile, ChatMessage, Me, Mode, Tab, Usage } from "@/lib/types";
+import type { AttachedFile, ChatMessage, Me, Mode, SessionSummary, Tab, Usage } from "@/lib/types";
 import { useTheme } from "@/lib/theme";
 import { Login } from "@/components/Login";
 import { Sidebar } from "@/components/Sidebar";
@@ -33,10 +34,15 @@ const SUGGESTIONS = [
   { icon: Newspaper, label: "Latest crypto news", text: "Give me the latest high-impact crypto news." },
 ];
 
+const newId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export default function Page() {
   const [me, setMe] = useState<Me | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("chat");
@@ -58,6 +64,12 @@ export default function Page() {
       .catch(() => {});
   }, []);
 
+  const refreshSessions = useCallback((id: string) => {
+    listSessions(id)
+      .then((r) => setSessions(r.sessions))
+      .catch(() => {});
+  }, []);
+
   // Autoscroll only when the user is already near the bottom.
   useEffect(() => {
     if (atBottomRef.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -75,6 +87,48 @@ export default function Page() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }
 
+  // ── Session management ──
+  function startNewSession() {
+    abortRef.current?.abort();
+    const id = newId();
+    setSessionId(id);
+    localStorage.setItem("getagent_session", id);
+    setMessages([]);
+    setTab("chat");
+    setSidebarOpen(false);
+  }
+
+  async function openSession(uid: string, sid: string) {
+    abortRef.current?.abort();
+    setSessionId(sid);
+    localStorage.setItem("getagent_session", sid);
+    try {
+      const s = await getSession(uid, sid);
+      setMessages(s.messages ?? []);
+    } catch {
+      setMessages([]);
+    }
+  }
+
+  function selectSession(sid: string) {
+    if (!me) return;
+    setTab("chat");
+    setSidebarOpen(false);
+    void openSession(me.uid, sid);
+  }
+
+  async function deleteSession(sid: string) {
+    if (!me) return;
+    await clearSession(me.uid, sid).catch(() => {});
+    const remaining = sessions.filter((s) => s.sessionId !== sid);
+    setSessions(remaining);
+    if (sid === sessionId) {
+      if (remaining[0]) await openSession(me.uid, remaining[0].sessionId);
+      else startNewSession();
+    }
+    refreshSessions(me.uid);
+  }
+
   async function connect(id: string) {
     if (!id) return;
     setError("");
@@ -83,10 +137,17 @@ export default function Page() {
       const meRes = await getMe(id);
       setMe(meRes);
       localStorage.setItem("getagent_uid", id);
-      const session = await getSession(id);
-      setMessages(session.messages ?? []);
-      refreshUsage(id);
       if (!meRes.leader) setTab("chat");
+
+      // Load history and open the saved or most-recent conversation, else a fresh one.
+      const { sessions } = await listSessions(id).catch(() => ({ sessions: [] as SessionSummary[] }));
+      setSessions(sessions);
+      const saved = localStorage.getItem("getagent_session");
+      const pick = sessions.find((s) => s.sessionId === saved) ?? sessions[0];
+      if (pick) await openSession(id, pick.sessionId);
+      else startNewSession();
+
+      refreshUsage(id);
     } catch (e) {
       const code = e instanceof ApiError ? e.code : "connection failed";
       setError(
@@ -118,12 +179,14 @@ export default function Page() {
     abortRef.current?.abort();
     setMe(null);
     setMessages([]);
+    setSessions([]);
+    setSessionId(null);
     setUsage(null);
     localStorage.removeItem("getagent_uid");
   }
 
   async function onSend(text: string, files: AttachedFile[]) {
-    if (!me || busy) return;
+    if (!me || busy || !sessionId) return;
     setError("");
     setSidebarOpen(false);
     setBusy(true);
@@ -135,10 +198,12 @@ export default function Page() {
       setBusy(false);
       setStatus("");
       refreshUsage(me.uid);
+      refreshSessions(me.uid);
     }
   }
 
   async function runChat(text: string, files: AttachedFile[]) {
+    const sid = sessionId!;
     let assistantIdx = -1;
     setMessages((m) => {
       assistantIdx = m.length;
@@ -151,7 +216,7 @@ export default function Page() {
     abortRef.current = ac;
     try {
       for await (const frame of streamChat(
-        { uid: me!.uid, message: text, attachedFiles: files },
+        { uid: me!.uid, sessionId: sid, message: text, attachedFiles: files },
         ac.signal,
       )) {
         if (frame.status) setStatus(frame.status);
@@ -175,7 +240,13 @@ export default function Page() {
   async function runImage(prompt: string, files: AttachedFile[]) {
     try {
       const ref = files[0]?.base64;
-      const { url } = await generateImage({ uid: me!.uid, prompt, aspectRatio: aspect, attachedFile: ref });
+      const { url } = await generateImage({
+        uid: me!.uid,
+        sessionId: sessionId!,
+        prompt,
+        aspectRatio: aspect,
+        attachedFile: ref,
+      });
       setMessages((m) => [...m, { role: "assistant", content: `![generated](${url})`, isImage: true }]);
     } catch (e) {
       const code = e instanceof ApiError ? e.code : "image failed";
@@ -193,7 +264,6 @@ export default function Page() {
 
   function regenerate() {
     if (busy) return;
-    // Find the last user turn, drop everything after it, and resend.
     let lastUser = -1;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "user") {
@@ -205,15 +275,6 @@ export default function Page() {
     const turn = messages[lastUser];
     setMessages((m) => m.slice(0, lastUser));
     void onSend(turn.content, turn.attachedFiles ?? []);
-  }
-
-  async function newSession() {
-    if (!me) return;
-    abortRef.current?.abort();
-    await clearSession(me.uid).catch(() => {});
-    setMessages([]);
-    setSidebarOpen(false);
-    refreshUsage(me.uid);
   }
 
   if (!me) {
@@ -235,16 +296,19 @@ export default function Page() {
         }}
         mode={mode}
         onMode={setMode}
-        onNewSession={newSession}
+        onNewSession={startNewSession}
         onDisconnect={disconnect}
         theme={theme}
         onToggleTheme={toggleTheme}
+        sessions={sessions}
+        currentSessionId={sessionId}
+        onSelectSession={selectSession}
+        onDeleteSession={deleteSession}
         mobileOpen={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">
-        {/* header */}
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 md:px-6">
           <button
             onClick={() => setSidebarOpen(true)}

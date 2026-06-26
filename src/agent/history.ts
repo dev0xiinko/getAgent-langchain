@@ -16,8 +16,8 @@ const MAX_PERSIST_FILE_BYTES = 2 * 1024 * 1024; // 2MB — base64 only kept unde
  *  2. take last 50
  *  3. strip trailing user messages (avoids consecutive-user turns → blank replies)
  */
-export async function loadHistory(uid: string): Promise<BaseMessage[]> {
-  const session = await AgentSession.findOne({ uid }).lean();
+export async function loadHistory(uid: string, sessionId: string): Promise<BaseMessage[]> {
+  const session = await AgentSession.findOne({ uid, sessionId }).lean();
   if (!session) return [];
 
   let msgs = (session.messages ?? []).filter((m: any) => !m.isImage).slice(-MAX_HISTORY);
@@ -77,9 +77,17 @@ export async function buildUserContent(message: string, files: AttachedFile[] = 
   ];
 }
 
+/** Derive a short, single-line conversation title from the first user message. */
+export function deriveTitle(message: string): string {
+  const t = message.replace(/\s+/g, " ").trim();
+  if (!t) return "New chat";
+  return t.length > 60 ? `${t.slice(0, 57)}…` : t;
+}
+
 /** Persist the inbound user message. base64 kept only if under 2MB. */
 export async function persistUserMessage(
   uid: string,
+  sessionId: string,
   message: string,
   files: AttachedFile[] = [],
 ): Promise<void> {
@@ -89,31 +97,42 @@ export async function persistUserMessage(
     base64: Buffer.byteLength(f.base64, "base64") < MAX_PERSIST_FILE_BYTES ? f.base64 : "",
   }));
   await AgentSession.updateOne(
-    { uid },
-    { $push: { messages: { role: "user", content: message, attachedFiles, timestamp: new Date() } } },
+    { uid, sessionId },
+    {
+      $push: { messages: { role: "user", content: message, attachedFiles, timestamp: new Date() } },
+      // Title is set once, when the conversation document is first created.
+      $setOnInsert: { title: deriveTitle(message) },
+    },
     { upsert: true },
   );
 }
 
 export async function persistAssistant(
   uid: string,
+  sessionId: string,
   content: string,
   toolUsed: string | null,
   isError = false,
 ): Promise<void> {
   if (!content) return;
   await AgentSession.updateOne(
-    { uid },
+    { uid, sessionId },
     { $push: { messages: { role: "assistant", content, toolUsed, isError, timestamp: new Date() } } },
     { upsert: true },
   );
 }
 
 /** Image endpoint persists a user prompt + an assistant image message, both isImage. */
-export async function persistImageMessages(uid: string, prompt: string, url: string): Promise<void> {
+export async function persistImageMessages(
+  uid: string,
+  sessionId: string,
+  prompt: string,
+  url: string,
+): Promise<void> {
   await AgentSession.updateOne(
-    { uid },
+    { uid, sessionId },
     {
+      $setOnInsert: { title: deriveTitle(prompt) },
       $push: {
         messages: {
           $each: [

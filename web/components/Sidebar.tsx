@@ -1,9 +1,10 @@
 "use client";
 import { MessageSquare, ImageIcon, FileBarChart, BookOpen, Plus, LogOut, Sun, Moon, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { Me, Mode, Tab, Usage } from "@/lib/types";
+import type { Me, Mode, SessionSummary, Tab, Usage } from "@/lib/types";
 import type { Theme } from "@/lib/theme";
 import { Brand } from "@/components/Brand";
+import { SessionList } from "@/components/SessionList";
 
 function Meter({ label, value, max }: { label: string; value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -62,6 +63,10 @@ export function Sidebar({
   onDisconnect,
   theme,
   onToggleTheme,
+  sessions,
+  currentSessionId,
+  onSelectSession,
+  onDeleteSession,
   mobileOpen,
   onCloseMobile,
 }: {
@@ -75,6 +80,10 @@ export function Sidebar({
   onDisconnect: () => void;
   theme: Theme;
   onToggleTheme: () => void;
+  sessions: SessionSummary[];
+  currentSessionId: string | null;
+  onSelectSession: (id: string) => void;
+  onDeleteSession: (id: string) => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }) {
@@ -163,14 +172,21 @@ export function Sidebar({
           </div>
         )}
 
+        <div className="mt-4 min-h-0 flex-1">
+          <SessionList
+            sessions={sessions}
+            currentId={currentSessionId}
+            onSelect={onSelectSession}
+            onDelete={onDeleteSession}
+          />
+        </div>
+
         {usage && (
-          <div className="mt-5 flex flex-col gap-3 px-4">
+          <div className="flex flex-col gap-3 border-t border-border px-4 py-3">
             <Meter label="Chat messages" value={usage.chatCount} max={usage.chatLimit} />
             <Meter label="Images" value={usage.imageCount} max={usage.imageLimit} />
           </div>
         )}
-
-        <div className="flex-1" />
 
         <div className="border-t border-border p-3">
           <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-1.5">
