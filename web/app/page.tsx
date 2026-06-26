@@ -361,21 +361,29 @@ export default function Page() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-6">
-                    {messages.map((m, i) => (
-                      <Message
-                        key={i}
-                        msg={m}
-                        streaming={
-                          busy && mode === "chat" && i === messages.length - 1 && m.role === "assistant"
-                        }
-                        onRegenerate={i === lastAssistantIdx && !busy ? regenerate : undefined}
-                        onSuggest={i === lastAssistantIdx && !busy ? (t) => onSend(t, []) : undefined}
-                      />
-                    ))}
-                    {busy && status && (
-                      <div className="flex items-center gap-2 pl-11 text-[13px] text-muted animate-fade-in">
-                        <TypingDots />
-                        <span>{status}</span>
+                    {messages.map((m, i) => {
+                      const isStreaming =
+                        busy && mode === "chat" && i === messages.length - 1 && m.role === "assistant";
+                      return (
+                        <Message
+                          key={i}
+                          msg={m}
+                          streaming={isStreaming}
+                          status={isStreaming ? status : undefined}
+                          onRegenerate={i === lastAssistantIdx && !busy ? regenerate : undefined}
+                          onSuggest={i === lastAssistantIdx && !busy ? (t) => onSend(t, []) : undefined}
+                        />
+                      );
+                    })}
+                    {busy && mode === "image" && (
+                      <div className="flex animate-fade-in gap-3">
+                        <BrandMark className="mt-0.5 h-8 w-8 shrink-0" />
+                        <div className="rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <TypingDots />
+                            <span className="shimmer text-[15px]">Generating image…</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

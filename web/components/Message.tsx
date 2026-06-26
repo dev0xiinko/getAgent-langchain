@@ -6,6 +6,7 @@ import type { ChatMessage } from "@/lib/types";
 import { extractSuggestions } from "@/lib/suggestions";
 import { MarkdownView } from "@/components/MarkdownView";
 import { BrandMark } from "@/components/Brand";
+import { TypingDots } from "@/components/ui";
 
 function Attachments({ files }: { files: NonNullable<ChatMessage["attachedFiles"]> }) {
   return (
@@ -36,11 +37,13 @@ function Attachments({ files }: { files: NonNullable<ChatMessage["attachedFiles"
 export function Message({
   msg,
   streaming,
+  status,
   onRegenerate,
   onSuggest,
 }: {
   msg: ChatMessage;
   streaming?: boolean;
+  status?: string;
   onRegenerate?: () => void;
   onSuggest?: (text: string) => void;
 }) {
@@ -89,6 +92,12 @@ export function Message({
 
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          ) : streaming && !body ? (
+            // No tokens yet — show an animated thinking / tool-status state.
+            <div className="flex items-center gap-2 py-0.5">
+              <TypingDots />
+              <span className="shimmer text-[15px]">{status?.trim() || "Thinking…"}</span>
+            </div>
           ) : (
             <div className="flex items-end gap-1">
               <MarkdownView content={body} />

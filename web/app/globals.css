@@ -55,6 +55,21 @@ body {
   background: rgb(var(--brand) / 0.3);
 }
 
+/* Animated shimmer for the "thinking…/searching…" status label. */
+.shimmer {
+  background: linear-gradient(90deg, rgb(var(--muted)) 0%, rgb(var(--text)) 50%, rgb(var(--muted)) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 /* Slim, theme-aware scrollbars. */
 .scrollbar-thin {
   scrollbar-width: thin;

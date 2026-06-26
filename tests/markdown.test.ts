@@ -33,6 +33,15 @@ describe("renderMarkdown", () => {
     expect(renderMarkdown("> quoted")).toContain("<blockquote>quoted</blockquote>");
   });
 
+  it("renders horizontal rules and strikethrough", () => {
+    const out = renderMarkdown("before\n\n---\n\nafter ~~gone~~ and __strong__");
+    expect(out).toContain("<hr/>");
+    expect(out).toContain("<del>gone</del>");
+    expect(out).toContain("<strong>strong</strong>");
+    // A table separator row must not be mistaken for an <hr/>.
+    expect(renderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |")).not.toContain("<hr/>");
+  });
+
   it("renders images only for http(s)/data URIs", () => {
     expect(renderMarkdown("![a](https://x/i.png)")).toContain('<img src="https://x/i.png" alt="" />');
     expect(renderMarkdown("![a](javascript:alert(1))")).not.toContain("<img");
